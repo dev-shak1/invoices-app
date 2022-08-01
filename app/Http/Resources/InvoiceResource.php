@@ -22,7 +22,7 @@ class InvoiceResource extends JsonResource
             'id' => $this->id,
             'created_at' => Carbon::parse($this->created_at)->format('Y-m-d'),
             'description' => $this->description,
-            'paymentDue' => $this->paymentDue,
+            'paymentDue' => Carbon::parse($this->paymentDue)->format('Y-m-d'),
             'paymentTerms' => $this->paymentTerms,
             'clientName' => $this->clientName,
             'clientEmail' => $this->clientEmail,
