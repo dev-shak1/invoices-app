@@ -10,12 +10,7 @@ class Item extends Model
     use HasFactory;
 
     protected $fillable = [
-        'invoice_id',
         'name',
-        'quantity',
-        'price',
-        'total'
+        'price'
     ];
-
-    protected $hidden = ['id', 'invoice_id', 'created_at', 'updated_at'];
 }

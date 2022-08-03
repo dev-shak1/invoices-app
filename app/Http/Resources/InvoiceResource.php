@@ -29,7 +29,7 @@ class InvoiceResource extends JsonResource
             'status' => $this->status,
             'senderAddress' => $this->senderAddress(),
             'clientAddress' => $this->clientAddress(),
-            'items' => $this->items(),
+            'items' => $this->invoice_items(),
             'total' => $this->total
         ];
     }
@@ -54,7 +54,18 @@ class InvoiceResource extends JsonResource
         ];
     }
 
-    private function items() {
-        return $this->items;
+    private function invoice_items() {
+        $invoice_items = $this->invoice_items;
+        $items = [];
+        foreach($invoice_items as $index => $item) {
+            $items[$index] = [
+                "name" => $item->item->name,
+                "quantity" => $item->quantity,
+                "price" => $item->item->price,
+                "total" => $item->total
+            ];
+        }
+
+        return $items;
     }
 }
