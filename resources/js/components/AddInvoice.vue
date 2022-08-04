@@ -1,16 +1,166 @@
 <script setup>
 import invoicejson from '../invoicedata.json'
-import { ref } from 'vue';
-const invoiceData = ref(invoicejson);
-console.log('Invoice data', invoiceData)
-const saveData = (()=>{
-  console.log("Change Data", invoiceData);
+import { ref, watch, computed, onMounted } from 'vue';
+import axios from 'axios'
+
+const props = defineProps({
+  invoice:Object
+})
+
+
+
+onMounted(()=>{
+getInvoiceItems();
+})
+
+const invoiceItems = ref([])
+
+
+const invoiceData = ref(props.invoice? props.invoice : (localStorage.hasOwnProperty('invoiceData'))? JSON.parse(localStorage.getItem('invoiceData')):invoicejson);
+const localData  = ref(!props.invoice?  invoiceData : null);
+
+/*
+  get Invoice Items
+*/
+const getInvoiceItems = (()=>{
+       axios.get(`http://127.0.0.1:8000/api/item`).then((data)=>{
+       const response =data.data.data;
+   
+     
+        invoiceData.value.items.forEach(element => {
+          const index = response.findIndex((resItem)=>resItem.id === element.id || resItem.item_id === element.id)
+          index > -1  && response.splice(index, 1)
+
+        });
+       invoiceItems.value = response;
+     });
+})
+
+
+//Function use to validate all fields
+const validateObject = ((object)=>{
+
+  const {description, paymentTerms, clientName, clientEmail, senderAddress, clientAddress} = object;
+  
+  const isSenderAddress =  senderAddress.city&&senderAddress.street&&senderAddress.country&&senderAddress.postCode;
+  
+  const isClientAddress =  clientAddress.city&&clientAddress.street&&clientAddress.country&&clientAddress.postCode;
+  
+  if(!description || !paymentTerms || !clientName || !clientEmail || !isClientAddress || !isSenderAddress){
+    return false;
+  }
+  
+  return true;
+
+});
+
+//Setting localStorage changes 
+watch(localData.value, (newObject) => {
+  localStorage.setItem('invoiceData', JSON.stringify(newObject))
+})
+
+
+const reformateObject = ((object)=>{
+
+  object.sender_street = object.senderAddress.street;
+  object.sender_city = object.senderAddress.city;
+  object.sender_postCode = object.senderAddress.postCode;
+  object.sender_country = object.senderAddress.country;
+
+  delete object.senderAddress;
+
+  object.client_street = object.clientAddress.street;
+  object.client_city = object.clientAddress.city;
+  object.client_postCode = object.clientAddress.postCode;
+  object.client_country = object.clientAddress.country;
+
+ delete object.clientAddress;
+  return object;
+})
+
+
+/*
+  Saving Invoice 
+*/
+
+const saveData = ((e, save=false)=>{
+
+   if(save && !validateObject(invoiceData.value)){
+    alert('Validation error, All Fields are required!.');
+    return;
+   }
+  const cloneInvoice = JSON.parse(JSON.stringify(invoiceData.value)); 
+
+   
+  save && (cloneInvoice.save = save)
+
+  const saveInvoiceData = reformateObject(cloneInvoice);
+
+  /*
+  Invoice Update Call
+  */
+ if(cloneInvoice.id){
+    axios.put(`http://127.0.0.1:8000/api/invoice/${cloneInvoice.id}`, saveInvoiceData).then((data)=>{
+          if(!data.data.errors){
+            location.reload();
+            alert("Invoice Updated")
+          }else{
+            alert(data.data.message);
+          }
+      });
+ }
+ else{
+      axios.post(`http://127.0.0.1:8000/api/invoice`, saveInvoiceData).then((data)=>{
+        if(!data.data.errors){
+          localStorage.removeItem('invoiceData')
+          location.reload();
+          alert("Invoice Added")
+        }else{
+          alert(data.data.message)
+        }
+      
+      }).catch((error)=>{
+        alert(error);
+      });
+ }
+
 })
 
 const getTitle = ((id)=>{
   return id? `Edit #${id}`: 'New Invoice'
 })
-const isRequired=false;
+
+const isRequired=ref(false);
+
+  /*
+  Adding Invoice Item
+  */
+const addItemInvoice = ((e)=>{
+  const index = parseInt( e.target.value);
+  if(index<0)return;
+  if(invoiceItems.value[index]){
+    const selectedItem = invoiceItems.value[index];
+    selectedItem.quantity = 1;
+    selectedItem.total = selectedItem.price;
+    selectedItem.item_id = selectedItem.id;
+    invoiceData.value.items.push(selectedItem)
+  }
+   e.target.value = '-1'
+   invoiceItems.value && invoiceItems.value.splice(index, 1);
+})
+
+/*
+ Delete Invoice Item
+*/
+const deleteInvoiceItem = ((e,index)=>{
+ const{id, name, price} =  invoiceData.value.items[index];
+invoiceData.value.items.splice(index, 1);
+invoiceItems.value && invoiceItems.value.push({id, name, price})
+})
+
+const currentDate = new Date().toISOString().split('T')[0];
+
+!props.invoice &&  (invoiceData.value.created_at = currentDate); 
 </script>
 
 <template>
@@ -90,12 +240,13 @@ const isRequired=false;
 
   <div class="mb-3 small-text">
     <label for="exampleInputEmail1" class="form-label">Project Description</label>
-    <input type="text" class="form-control" v-model="invoiceData.clientAddress.street" aria-describedby="emailHelp">
+    <input type="text" class="form-control" v-model="invoiceData.description" aria-describedby="emailHelp">
   </div>
 
 
 <div class="item-list mb-5">
  <div class="list-item-title mb">Item List</div>
+
 <table class="small-text w-100">
   <thead>
     <tr>
@@ -107,38 +258,32 @@ const isRequired=false;
     </tr>
   </thead>
   <tbody>
-    <tr>
-      <th class="td-container" scope="row">1</th>
-      <td class="td-container">Mark</td>
-      <td class="td-container">Otto</td>
-      <td>@mdo</td>
-      <td><img class="delete-icon" src="../assets/icon-delete.svg"/></td>
-    </tr>
-    <tr>
-      <th class="td-container" scope="row">1</th>
-      <td class="td-container">Mark</td>
-      <td class="td-container">Otto</td>
-      <td>@mdo</td>
-      <td><img class="delete-icon" src="../assets/icon-delete.svg"/></td>
-    </tr>
-    <tr>
-      <th class="td-container" scope="row">1</th>
-      <td class="td-container">Mark</td>
-      <td class="td-container">Otto</td>
-      <td>@mdo</td>
-      <td><img class="delete-icon" src="../assets/icon-delete.svg"/></td>
+    <tr v-for="(item, index) in invoiceData?.items">
+      <th class="td-container" scope="row">{{item.name}}</th>
+          
+      <td class="td-container w-25"><input type="number" v-model="item.quantity" min="0"  class="form-control" ></td>
+      <td class="td-container">{{item.price}}</td>
+      <td>{{item.quantity*item.price}}</td>
+      <td @click="deleteInvoiceItem($event, index)"><img class="delete-icon" src="../assets/icon-delete.svg"/></td>
     </tr>
   </tbody>
 </table>
-<button class="round-button w-100 color-bg-252945 mt-1 text-color-moon small-text mb-3">
-+ Add New Item
-</button>
+     <div class="mt-1 small-text  w-100 mb-3" v-if="invoiceItems.length" >
+
+        <select class="form-select form-control field add-button" @change="addItemInvoice">
+          <option value="-1" selected> + Add New Item</option>
+          <option v-for="(invoiceItem, index) in invoiceItems" :value="index">{{invoiceItem.name}}</option>
+        </select>
+    </div>
+
 
 <div class="d-flex ">
-  <button class="round-button  color-bg-252945 mt-1 small-text color-bg-F8F8FB">Discard</button>
+  <button  class="round-button  color-bg-252945 mt-1 small-text color-bg-F8F8FB" >Discard</button>
   <div class="button-right-container">
-     <button class="round-button color-bg-252945 mt-1 small-text text-color-moon color-bg-888EB0 me-2" @submit="saveData">Save As Draft</button>
-      <button class="round-button  color-bg-252945 mt-1 small-text color-bg-7C5DFA text-color-moon" @click="saveData">Save & Send</button>
+     <button v-if="!props.invoice" class="round-button color-bg-252945 mt-1 small-text text-color-moon color-bg-888EB0 me-2"  @click.prevent="saveData">Save As Draft</button>
+      <button v-if="!props.invoice" class="round-button  color-bg-252945 mt-1 small-text color-bg-7C5DFA text-color-moon" @click.prevent="saveData($event, true)">Save & Send</button>
+      <button v-if="
+      props.invoice" class="round-button  color-bg-252945 mt-1 small-text color-bg-7C5DFA text-color-moon" @click.prevent="saveData($event, true)">Save & Close</button>
   </div>
 
 </div>
@@ -147,6 +292,8 @@ const isRequired=false;
 
 
 </form>
+
+
 
 
 </div>
@@ -162,10 +309,13 @@ const isRequired=false;
     padding: 0px;
     border-bottom-right-radius: 15px;
     border-top-right-radius: 15px;
+    border-right: 2px solid;
 }
 form{
     padding: 30px;
     padding-top: 60px;
+    max-height: 100vh;
+    overflow-y: scroll;
 
 }
 .invoice-title, .new-invoice{
@@ -208,5 +358,9 @@ table{
   display: flex;
   margin-left: auto;
 
+}
+.add-button{
+  text-align: center;
+  background-image:none;
 }
 </style>

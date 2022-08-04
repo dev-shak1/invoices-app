@@ -7,7 +7,7 @@ import AddVoice from '../components/AddInvoice.vue'
 
 const invoice = ref(invoicejson);
 const route = useRoute();
-const isAddInvoice = ref(true);
+const isAddInvoice = ref(false);
 
 const getInvoiceData = ()=>{
      axios.get(`http://127.0.0.1:8000/api/invoice/${route.params.id}`).then((data)=>{
@@ -30,6 +30,10 @@ const deleteInvoice = (()=>{
  });
 })
 
+const editInvoice = (()=>{
+  toggleAddInvoice()
+})
+
 const toggleAddInvoice = (()=>{
     isAddInvoice.value = !isAddInvoice.value;
 })
@@ -37,10 +41,10 @@ const toggleAddInvoice = (()=>{
 
 <template>
 <div class="w-100">
-<AddVoice v-if="isAddInvoice" />
-<div class="invoice-detail text-color-moon ms-auto">
+<AddVoice v-if="isAddInvoice" :invoice="invoice" />
+<div class="invoice-detail text-color-moon ms-auto" :style="{opacity:isAddInvoice?0.3:1}">
 
-    <div class="d-flex flex-column">
+    <div class="d-flex flex-column w-50">
 
         <div class="invoice-detail-header d-flex">
             <img class="delete-icon me-3 mt-1" src="../assets/icon-arrow-left.svg"/>
@@ -63,7 +67,7 @@ const toggleAddInvoice = (()=>{
    <div class="btn-container">
 
       <button
-         class="btn btn-edit"  @click="$router.push({name: 'home', params: { id: invoice.id }})"
+         class="btn btn-edit"  @click="editInvoice"
          >
       Edit
       </button>
@@ -380,5 +384,9 @@ display: flex;
 }
 a{
         text-decoration: none;
+}
+button{
+  height: 45px !important;
+    font-size: 12px;
 }
 </style>

@@ -23,3 +23,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::resource('item', ItemController::class);
 Route::resource('invoice', InvoiceController::class);
 Route::post('invoice/update-status/{id}', [InvoiceController::class, 'updateStatus']);
+Route::get('invoice/filter-by-status/{status}', [InvoiceController::class, 'filterByStatus']);

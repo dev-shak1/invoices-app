@@ -74,9 +74,9 @@ class InvoiceController extends Controller
 
         $id = $this->getId();
         $total = 0;
+        $items = [];
 
         if(count($request->items) > 0) {
-            $items = [];
             foreach($request->items as $index => $item) {
                 $item_total = $item['quantity'] * $item['price'];
 
@@ -149,7 +149,7 @@ class InvoiceController extends Controller
 
         if(count($request->items) == 0) {
             return response()->json([
-                'message' => 'Validation Failed',
+                'message' => 'Validation Failed, Invoice should contain atleast 1 item!',
                 'errors' => 'Invoice should contain atleast 1 item!'
             ]);
         }
@@ -183,6 +183,12 @@ class InvoiceController extends Controller
                         'quantity' => $item['quantity'],
                         'total' => $item_total
                     ];
+                }
+                else {
+                    $invoice_item = InvoiceItem::where(['invoice_id' => $id, 'item_id' => $item['item_id']])->first();
+                    $invoice_item->quantity = $item['quantity'];
+                    $invoice_item->total = $item_total;
+                    $invoice_item->save();
                 }
 
                 $total += $item_total;
@@ -227,6 +233,16 @@ class InvoiceController extends Controller
             'status' => 200,
             'message' => 'Status Updated successfully!'
         ]);
+    }
+
+    public function filterByStatus($status) {
+        if($status == 'empty') {
+            $invoices = Invoice::get();
+        }
+        else {
+            $invoices = Invoice::where('status', $status)->get();
+        }
+        return InvoiceResource::collection($invoices);
     }
 
     protected function getId() {

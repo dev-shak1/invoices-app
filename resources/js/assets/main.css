@@ -53,6 +53,17 @@
   background-color: #F8F8FB;
 }
 
+::-webkit-scrollbar {
+  width: 7px;
+}
+
+
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #252945; 
+}
+
 /* a,
 .green {
   text-decoration: none;

@@ -59,6 +59,7 @@ class InvoiceResource extends JsonResource
         $items = [];
         foreach($invoice_items as $index => $item) {
             $items[$index] = [
+                "item_id" => $item->item->id,
                 "name" => $item->item->name,
                 "quantity" => $item->quantity,
                 "price" => $item->item->price,
