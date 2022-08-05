@@ -8,6 +8,7 @@ then create a .env file and add the contents of .env.example file in it
 
 1) npm run install
 2) npm run dev
+3) composer update --no-scripts
 3) php artisan key:generate
 4) php artisan serve
 
